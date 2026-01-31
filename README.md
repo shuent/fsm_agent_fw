@@ -72,8 +72,8 @@ tools.get_tool_schemas()  # LLM向けのツールスキーマを取得
 ### 3. ヘルパー関数
 
 ```python
-# Anthropic形式のツールスキーマ生成
-tools_to_anthropic_schema(tool_registry)
+# Google GenAI形式のツールスキーマ生成
+tools_to_google_ai_schema(tool_registry)
 
 # オーケストレーター用のガイドテキスト生成
 generate_orchestrator_guide(fsm, tool_registry)
@@ -118,8 +118,9 @@ Python関数として登録されたツール群。
 ### ステップ1: FSMとツールを定義
 
 ```python
-from anthropic import Anthropic
-from fsm_agent import FSM, ToolRegistry, generate_orchestrator_guide, tools_to_anthropic_schema
+import os
+from google import genai
+from fsm_agent import FSM, ToolRegistry, generate_orchestrator_guide, tools_to_google_ai_schema
 
 # ツール定義
 tools = ToolRegistry()
@@ -159,70 +160,61 @@ fsm = FSM(
 ### ステップ2: オーケストレーターを実装
 
 ```python
-client = Anthropic()
-
-# システムプロンプト
-system = [
-    {
-        "type": "text",
-        "text": f"""
-あなたはコンテンツ制作チームのリーダーです。
-
-{generate_orchestrator_guide(fsm, tools)}
-
-## あなたの役割
-1. FSMの状態に従ってワークフローを進める
-2. 各状態で適切なツールを選択・実行する
-3. レビューで承認されるまで執筆を繰り返す
-        """
-    }
-]
-
-messages = [
-    {"role": "user", "content": "AIの最新動向について記事を作成してください"}
-]
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # 特殊ツール: 状態遷移
+@tools.register
 def transition_state(next_state: str, reason: str = "") -> str:
     """状態を遷移する"""
     fsm.transition(next_state)
     return f"Transitioned to: {next_state}"
-
-tools.register(transition_state)
 ```
 
 ### ステップ3: メインループ
 
 ```python
+from google.genai import types
+
+# チャット履歴の初期化
+chat_history = []
+user_request = "AIの最新動向について記事を作成してください"
+chat_history.append(types.Content(role="user", parts=[types.Part(text=user_request)]))
+
 # メッセージ駆動型自律ループ
 while not fsm.is_terminal():
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4096,
-        system=system,
-        messages=messages,
-        tools=tools_to_anthropic_schema(tools)
+    # 動的システムプロンプトの生成
+    orchestrator_guide = generate_orchestrator_guide(fsm, tools)
+    system_instruction = f"""
+    あなたはコンテンツ制作チームのリーダーです。
+    {orchestrator_guide}
+    """
+
+    # LLM呼び出し
+    response = client.models.generate_content(
+        model="gemini-2.5-flash-lite",
+        contents=chat_history,
+        config=types.GenerateContentConfig(
+            tools=tools_to_google_ai_schema(tools),
+            system_instruction=system_instruction
+        )
     )
     
-    messages.append({"role": "assistant", "content": response.content})
+    # 履歴に追加
+    chat_history.append(response.candidates[0].content)
     
-    # ツール実行
-    tool_results = []
-    for block in response.content:
-        if block.type == "tool_use":
-            result = tools.execute(block.name, **block.input)
-            
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": str(result)
-            })
-    
-    if tool_results:
-        messages.append({"role": "user", "content": tool_results})
-    
-    if response.stop_reason == "end_turn":
-        break
+    # ツール実行と結果処理
+    part = response.candidates[0].content.parts[0]
+    if part.function_call:
+        result = tools.execute(part.function_call.name, **part.function_call.args)
+        
+        # 結果を履歴に追加
+        chat_history.append(types.Content(
+            role="user",
+            parts=[types.Part.from_function_response(
+                name=part.function_call.name,
+                response={"result": result}
+            )]
+        ))
 
 print("Workflow completed!")
 ```
