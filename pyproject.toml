@@ -1,10 +1,24 @@
 [project]
 name = "fsm-agent-fw"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Finite State Machine (FSM) driven agent framework for reliable and structured LLM interactions."
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.13"
+authors = [{ name = "shuent" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "google-genai>=1.61.0",
     "python-dotenv>=1.2.1",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fsm_agent"]
