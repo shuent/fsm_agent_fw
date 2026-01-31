@@ -1,17 +1,19 @@
 # FSM Agent Framework
 
-**FSM（有限オートマトン）ベースの超軽量AIエージェントフレームワーク**
+[日本語ver](README.ja.md)
 
-LangGraphのような複雑な抽象化を排除し、LLMの推論能力と構造化出力を最大限に活かすことで、「最小限のコード」と「明確な思考プロセス」を両立します。
+**An Ultra-Lightweight AI Agent Framework Based on FSM (Finite State Machines)**
+
+By eliminating complex abstractions like LangGraph and maximizing the inference capabilities and structured outputs of LLMs, this framework achieves both "minimal code" and a "clear thought process."
 
 ---
 
-## フレームワークが提供するもの
+## What the Framework Provides
 
-このフレームワークは、以下の**2つのコアコンポーネント**のみを提供します：
+This framework provides only **two core components**:
 
-### 1. `FSM` クラス
-状態遷移の定義と検証を行うシンプルなクラスです。
+### 1. `FSM` Class
+A simple class for defining and validating state transitions.
 
 ```python
 from fsm_agent import FSM
@@ -28,20 +30,20 @@ fsm = FSM(
     terminal_states=["end"]
 )
 
-# 使用例
-fsm.get_next_states()  # 現在の状態から遷移可能な状態のリストを取得
-fsm.transition("researching")  # 状態遷移（検証付き）
-fsm.is_terminal()  # 終了状態かどうかを判定
+# Usage examples
+fsm.get_next_states()  # Get list of possible next states from current state
+fsm.transition("researching")  # Transition state (with validation)
+fsm.is_terminal()  # Check if current state is a terminal state
 ```
 
-**機能:**
-- 状態遷移の定義と検証
-- 現在の状態の管理
-- 遷移可能な状態の取得
-- 終了状態の判定
+**Features:**
+- Definition and validation of state transitions
+- Management of the current state
+- Retrieval of accessible states
+- Terminal state determination
 
-### 2. `ToolRegistry` クラス
-Python関数をツールとして登録・管理するクラスです。
+### 2. `ToolRegistry` Class
+A class to register and manage Python functions as tools.
 
 ```python
 from fsm_agent import ToolRegistry
@@ -50,106 +52,106 @@ tools = ToolRegistry()
 
 @tools.register
 def research_web(topic: str) -> str:
-    """指定されたトピックについてWeb調査を行う"""
+    """Conduct web research on the specified topic"""
     return f"Research completed: {topic}"
 
 @tools.register
 def write_article(content: str) -> str:
-    """記事を執筆する"""
+    """Write an article"""
     return f"Article: {content}"
 
-# 使用例
+# Usage examples
 tools.execute("research_web", topic="AI")
-tools.get_tool_schemas()  # LLM向けのツールスキーマを取得
+tools.get_tool_schemas()  # Get tool schemas formatted for LLMs
 ```
 
-**機能:**
-- デコレータによるツール登録
-- ツールの実行
-- LLM向けスキーマの自動生成（OpenAI/Anthropic形式）
-- 登録されたツールの一覧取得
+**Features:**
+- Tool registration via decorators
+- Tool execution
+- Automatic schema generation for LLMs (OpenAI/Anthropic formats)
+- Retrieval of registered tool lists
 
-### 3. ヘルパー関数
+### 3. Helper Functions
 
 ```python
-# Google GenAI形式のツールスキーマ生成
+# Generate tool schemas in Google GenAI format
 tools_to_google_ai_schema(tool_registry)
 
-# オーケストレーター用のガイドテキスト生成
+# Generate guide text for the orchestrator
 generate_orchestrator_guide(fsm, tool_registry)
 ```
 
 ---
 
-## このフレームワークで作るエージェントの設計思想
+## Design Philosophy for Agents
 
-### 3つの役割分担
+When building an agent with this framework, keep these three roles in mind:
 
-フレームワークを使ってエージェントを構築する際は、以下の3つの役割を意識します：
+### 3 Roles
 
-#### ① FSM（地図）
-「どの状態から、どの状態へ遷移できるか」を定義したプレーンな辞書データ。
+#### ① FSM (The Map)
+Plain dictionary data defining "from which state, to which state" transitions are allowed.
 
-- **役割**: エージェントが逸脱しないためのガードレール
-- **設計方針**: ワークフローなら一方向、自律タスクなら分岐やループ
-- **AIへの提示**: プロンプトで「現在の状態」と「遷移可能な選択肢」を常に提示
+- **Role**: Guardrails to prevent the agent from deviating.
+- **Design Policy**: One-way for workflows; branching and loops for autonomous tasks.
+- **Presentation to AI**: The prompt always displays "Current State" and "Available Transition Options."
 
-#### ② ツール（道具箱）
-Python関数として登録されたツール群。
+#### ② Tools (The Toolbox)
+A group of tools registered as Python functions.
 
-- **役割**: 現実世界（API、DB、計算）への作用
-- **設計方針**: 「特化型エージェント」も「単なるツール」も区別せず、すべてPython関数として定義
-- **統一インターフェース**: サブエージェント呼び出しも、単一ツール実行も、同じ「関数実行」として抽象化
+- **Role**: Interaction with the real world (APIs, DBs, Calculations).
+- **Design Policy**: Do not distinguish between "Specialized Agents" and "Simple Tools"—define everything as Python functions.
+- **Unified Interface**: Sub-agent calls and single tool executions are abstracted as the same "function execution."
 
-#### ③ オーケストレーター（脳）
-会話履歴を管理し、FSMの上で意思決定を行うLLM。
+#### ③ Orchestrator (The Brain)
+The LLM that manages conversation history and makes decisions based on the FSM.
 
-- **役割**: FSMの操作、ツールの選択、コンテキストの維持
-- **思考プロセス**:
-  1. 会話履歴（コンテキスト）を読み込む
-  2. 現在のステートと、FSMに基づく「次の選択肢」を照らし合わせる
-  3. 「次に何をすべきか」を構造化出力として宣言する
-- **実装**: ユーザーが自由に実装（フレームワークは強制しない）
+- **Role**: Operating the FSM, selecting tools, and maintaining context.
+- **Thought Process**:
+  1. Read conversation history (Context).
+  2. Compare current state with "Next Options" based on the FSM.
+  3. Declare "What to do next" via structured output.
+- **Implementation**: Implemented freely by the user (The framework does not enforce logic here).
 
 ---
 
-## 基本的な使い方
+## Basic Usage
 
-### ステップ1: FSMとツールを定義
+### Step 1: Define FSM and Tools
 
 ```python
 import os
 from google import genai
 from fsm_agent import FSM, ToolRegistry, generate_orchestrator_guide, tools_to_google_ai_schema
 
-# ツール定義
+# Tool Definition
 tools = ToolRegistry()
 
 @tools.register
 def research_web(topic: str) -> str:
-    """指定されたトピックについてWeb調査を行う"""
+    """Conduct web research on the specified topic"""
     return f"Research completed: {topic} is important because..."
 
 @tools.register
 def write_article(research_result: str) -> str:
-    """調査結果を元に記事を執筆する"""
+    """Write an article based on research results"""
     return f"Article: Based on research, here's the article..."
 
 @tools.register
 def review_article(article: str) -> str:
-    """記事をレビューする"""
+    """Review the article"""
     if len(article) > 50:
         return "APPROVED"
     else:
         return "REJECTED: Too short"
 
-# FSM定義
+# FSM Definition
 fsm = FSM(
     states={
         "start": ["researching"],
         "researching": ["writing"],
         "writing": ["reviewing"],
-        "reviewing": ["writing", "end"],  # NGなら執筆に戻る
+        "reviewing": ["writing", "end"],  # Return to writing if rejected
         "end": []
     },
     initial_state="start",
@@ -157,39 +159,39 @@ fsm = FSM(
 )
 ```
 
-### ステップ2: オーケストレーターを実装
+### Step 2: Implement Orchestrator
 
 ```python
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-# 特殊ツール: 状態遷移
+# Special Tool: State Transition
 @tools.register
 def transition_state(next_state: str, reason: str = "") -> str:
-    """状態を遷移する"""
+    """Transition to the next state"""
     fsm.transition(next_state)
     return f"Transitioned to: {next_state}"
 ```
 
-### ステップ3: メインループ
+### Step 3: Main Loop
 
 ```python
 from google.genai import types
 
-# チャット履歴の初期化
+# Initialize Chat History
 chat_history = []
-user_request = "AIの最新動向について記事を作成してください"
+user_request = "Create an article about the latest trends in AI"
 chat_history.append(types.Content(role="user", parts=[types.Part(text=user_request)]))
 
-# メッセージ駆動型自律ループ
+# Message-Driven Autonomous Loop
 while not fsm.is_terminal():
-    # 動的システムプロンプトの生成
+    # Generate Dynamic System Prompt
     orchestrator_guide = generate_orchestrator_guide(fsm, tools)
     system_instruction = f"""
-    あなたはコンテンツ制作チームのリーダーです。
+    You are the leader of a content production team.
     {orchestrator_guide}
     """
 
-    # LLM呼び出し
+    # Call LLM
     response = client.models.generate_content(
         model="gemini-2.5-flash-lite",
         contents=chat_history,
@@ -199,15 +201,15 @@ while not fsm.is_terminal():
         )
     )
     
-    # 履歴に追加
+    # Add to History
     chat_history.append(response.candidates[0].content)
     
-    # ツール実行と結果処理
+    # Execute Tool and Process Result
     part = response.candidates[0].content.parts[0]
     if part.function_call:
         result = tools.execute(part.function_call.name, **part.function_call.args)
         
-        # 結果を履歴に追加
+        # Add Result to History
         chat_history.append(types.Content(
             role="user",
             parts=[types.Part.from_function_response(
@@ -221,123 +223,123 @@ print("Workflow completed!")
 
 ---
 
-## アーキテクチャ: メッセージ駆動型自律ループ
+## Architecture: Message-Driven Autonomous Loop
 
-オーケストレーター（LLM）と実行環境（Python）の間で、以下のサイクルを回します：
+The cycle below rotates between the Orchestrator (LLM) and the Execution Environment (Python):
 
 ```
 ┌─────────────────────────────────────────┐
-│ 1. 注入 (Context Injection)              │
-│    - 会話履歴                            │
-│    - 現在のステート                       │
-│    - 遷移可能なステート                   │
-│    - 使用可能なツール                     │
+│ 1. Injection (Context Injection)        │
+│    - Conversation History               │
+│    - Current State                      │
+│    - Accessible Next States             │
+│    - Available Tools                    │
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
-│ 2. 宣言 (AI Declaration)                 │
-│    - LLMが次のアクションを構造化出力      │
-│    - call_tool または transition         │
+│ 2. Declaration (AI Declaration)         │
+│    - LLM structured output for next action
+│    - call_tool or transition            │
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
-│ 3. 実行 (Execution)                      │
-│    - Pythonがツール実行 or 状態遷移       │
+│ 3. Execution (Execution)                │
+│    - Python runs tool or state transition
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
-│ 4. 蓄積 (Memory Accumulation)            │
-│    - 実行結果を messages に追記           │
+│ 4. Accumulation (Memory Accumulation)   │
+│    - Append execution results to messages
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
-│ 5. 判定 (Termination Check)              │
-│    - 終了状態に到達したか確認             │
+│ 5. Termination Check                    │
+│    - Check if terminal state is reached │
 └─────────────────────────────────────────┘
 ```
 
 ---
 
-## 状態管理と共有コンテキスト (State Management & Shared Context)
+## State Management & Shared Context
 
-このフレームワークは、**ライブラリレベルでのコンテキスト共有機能を提供しません**。
+This framework **does not provide library-level context sharing features**.
 
-### なぜか？
-1.  **シンプルさの維持**: 複雑な依存性注入メカニズムは、コードの可読性を下げ、デバッグを困難にします。
-2.  **ユーザー空間での制御**: ステートをクラスのインスタンス変数で持つか、グローバル変数で持つか、データベースで持つかは、アプリケーションの要件によって異なるべきです。
-3.  **トークン効率 (Token Efficiency)**: オーケストレーターに巨大なデータを渡さず、ツール間で裏側でデータを受け渡すパターン（Shared Context）を実装しやすくするためです。
+### Why?
+1.  **Maintaining Simplicity**: Complex dependency injection mechanisms reduce code readability and make debugging difficult.
+2.  **User-Space Control**: Whether state is held in class instance variables, global variables, or a database should depend on the application requirements.
+3.  **Token Efficiency**: To encourage patterns where massive data is not passed to the orchestrator, but handled behind the scenes between tools (Shared Context).
 
-### 推奨パターン: "Hidden Context"
-巨大なデータ（記事本文、検索結果の全量など）はオーケストレーターのコンテキストウィンドウを圧迫します。以下のように、ツール間でデータを共有し、オーケストレーターには「サマリー」だけを返す設計を推奨します。
+### Recommended Pattern: "Hidden Context"
+Huge data (article bodies, full search results) clogs the orchestrator's context window. We recommend a design where data is shared between tools, and only a "summary" is returned to the orchestrator.
 
 ```python
-# 共有コンテキスト（ユーザーコード側で定義）
+# Shared Context (Defined in user code)
 context = {}
 
 @tools.register
 def heavy_task() -> str:
-    # 巨大なデータを生成
+    # Generate massive data
     data = generate_huge_data() 
-    # コンテキストに保存
+    # Store in context
     context["data_id"] = data 
-    # オーケストレーターにはサマリーだけ返す
+    # Return only summary to orchestrator
     return "Data generated and stored in context."
 
 @tools.register
 def next_task() -> str:
-    # コンテキストから読み出す（オーケストレーター経由ではない）
+    # Read from context (Not via Orchestrator)
     data = context.get("data_id") 
     process(data)
     return "Processed data from context."
 ```
 
-こうすることで、オーケストレーターは「データの流れ」だけを制御し、実際の「データの中身」は見ないため、トークン消費を最小限に抑えられます。
+By doing this, the orchestrator controls only the "flow of data" without seeing the actual "content of data," minimizing token consumption.
 
 ---
 
-## 設計哲学
+## Design Philosophy
 
-### なぜこの「薄さ」なのか
+### Why this "Thinness"?
 
-#### 1. **「地図」を渡せばLLMは歩ける**
-現代のLLMは、FSMのような論理的な制約をプロンプトで与えれば、外部の複雑な制御ロジックなしで自律的に動けます。
+#### 1. **"Give the Map, and the LLM Can Walk"**
+Modern LLMs can move autonomously without complex external control logic if given logical constraints like an FSM via prompts.
 
-#### 2. **ツールとエージェントのフラット化**
-「ここからはエージェントの仕事、ここからはツールの仕事」という境界を消し、すべてをPython関数として定義することで、設計を極限までシンプルにします。
+#### 2. **Flattening Tools and Agents**
+We erase the boundary of "from here is the agent's job, from here is the tool's job." By defining everything as Python functions, the design becomes extremely simple.
 
-#### 3. **構造化出力への全面的な信頼**
-パースエラーに怯える時代は終わりました。OpenAIやAnthropicの構造化出力機能を直接使うことで、LLMの「宣言」をそのままコードのロジックに直結させます。
+#### 3. **Total Trust in Structured Output**
+The era of fearing parse errors is over. By directly using the structured output features of OpenAI or Anthropic, we connect the LLM's "Declaration" directly to code logic.
 
-#### 4. **オーケストレーション部分はユーザーが実装**
-フレームワークは最小限のプリミティブ（FSM、ToolRegistry）のみを提供。ループの書き方、エラーハンドリング、ロギングなどは、ユーザーの要件に合わせて自由に実装できます。
+#### 4. **User Implements Orchestration**
+The framework provides only the minimal primitives (FSM, ToolRegistry). How to write the loop, error handling, logging, etc., can be freely implemented according to user requirements.
 
 ---
 
-## LangGraphとの違い
+## Differences from LangGraph
 
-| 項目 | FSM Agent | LangGraph |
+| Item | FSM Agent | LangGraph |
 |------|-----------|-----------|
-| **抽象化レベル** | 最小限（FSM + ToolRegistry） | 高レベル（Graph, Node, Edge） |
-| **ループ制御** | ユーザーが実装 | フレームワークが提供 |
-| **状態管理** | シンプルなFSM | StateGraph with reducers |
-| **学習コスト** | 低（Pythonの基礎のみ） | 中〜高（独自概念多数） |
-| **カスタマイズ性** | 完全に自由 | フレームワークの範囲内 |
-| **適用範囲** | シンプルなワークフロー〜中規模タスク | 大規模・複雑なマルチエージェント |
+| **Abstraction Level** | Minimal (FSM + ToolRegistry) | High (Graph, Node, Edge) |
+| **Loop Control** | User Implements | Framework Provided |
+| **State Management** | Simple FSM | StateGraph with reducers |
+| **Learning Cost** | Low (Basic Python only) | Medium-High (Many unique concepts) |
+| **Customizability** | Completely Free | Within Framework Limits |
+| **Scope** | Simple workflows to mid-scale tasks | Large-scale, complex multi-agents |
 
 ---
 
-## ライセンス
+## License
 
 MIT
 
 ---
 
-## まとめ
+## Summary
 
-このフレームワークは、**最小限のプリミティブ**を提供することで、LLMの推論能力を最大限に引き出します。
+This framework maximizes LLM inference capabilities by providing **minimal primitives**.
 
-- **フレームワークが提供**: `FSM` と `ToolRegistry`
-- **ユーザーが実装**: オーケストレーションループ、プロンプト設計、エラーハンドリング
-- **LLMが担当**: 状態遷移の判断、ツール選択、タスク実行
+- **Framework Provides**: `FSM` and `ToolRegistry`
+- **User Implements**: Orchestration loop, prompt design, error handling
+- **LLM Handles**: State transition decisions, tool selection, task execution
 
-シンプルさと柔軟性を両立した、新しいエージェントフレームワークです。
+It is a new agent framework that balances simplicity and flexibility.
