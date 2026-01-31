@@ -297,6 +297,30 @@ By doing this, the orchestrator controls only the "flow of data" without seeing 
 
 ---
 
+## Variable Agentic Levels
+
+One strength of this framework is that the "Agentic Level" can be adjusted freely.
+
+### 1. Deterministic Workflows (Low Agentic)
+The orchestrator is implemented as deterministic code. State transitions are defined by fixed rules, not LLM decisions.
+- **Use Case**: Tasks where reliability and reproducibility are critical.
+- **Orchestration**: `if score > 80: fsm.transition("approve")`
+- **LLM Role**: Used only for specific sub-tasks (e.g., summarization, extraction).
+
+### 2. Hybrid Agents (The "Middle")
+The standard use case. The FSM defines the "Map" (boundaries), and the LLM decides the path.
+- **Use Case**: General assistant bots, complex data processing.
+- **Orchestration**: LLM chooses the next state from `fsm.get_next_states()`.
+- **LLM Role**: Decides both tool usage and state transitions.
+
+### 3. Fully Agentic (High Agentic)
+Given a Goal and Tools, the agent freely navigates. The FSM is used only for high-level phase management (e.g., Plan -> Execute -> Review).
+- **Use Case**: Research, open-ended problem solving.
+- **Orchestration**: Multiple transition options available; the agent strategizes the best path.
+- **LLM Role**: Full autonomy within the broad phases defined by the FSM.
+
+---
+
 ## Design Philosophy
 
 ### Why this "Thinness"?
